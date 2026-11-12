@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<title>AI 학생 공감 진단 대시보드</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: 연수 제목 띠 → (홈) 4열 페르소나 카드 그리드 / (상세) 좌측 지표·전략 패널 + 우측 대화창과 라포 레일 */
+:root{
+  --bg:#f3f6fb; --surface:#ffffff; --ink:#0f172a; --muted:#64748b; --faint:#94a3b8;
+  --line:#e4e9f2; --track:#e8edf5; --field:#eef2f8;
+  --panel:#0f172a; --panel-ink:#e6edf9; --panel-muted:#7f8ba3; --panel-line:#26324d; --panel-accent:#60a5fa;
+  --cta-bg:#0f172a; --cta-fg:#ffffff;
+  --blue:#2563eb; --orange:#f97316; --green:#059669; --pink:#ec4899; --rose:#f43f5e; --amber:#f5b301;
+  --bubble-me:#2563eb; --bubble-me-ink:#ffffff; --coach-bg:#eff6ff; --coach-ink:#1e40af;
+  --shadow:0 10px 30px -12px rgba(15,23,42,.18);
+  --font:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0a111e; --surface:#131c2d; --ink:#e9eff9; --muted:#97a5bc; --faint:#6b7a93;
+  --line:#243049; --track:#222d45; --field:#1b2539;
+  --panel:#18233b; --panel-ink:#e6edf9; --panel-muted:#8c99b3; --panel-line:#2e3c5c; --panel-accent:#7db5ff;
+  --cta-bg:#2563eb; --cta-fg:#ffffff;
+  --blue:#4b83f5; --orange:#fb8a3c; --green:#22b488; --pink:#f062ad; --rose:#fb7185; --amber:#f5c542;
+  --bubble-me:#2f6bea; --bubble-me-ink:#ffffff; --coach-bg:#172a4d; --coach-ink:#b6d0ff;
+  --shadow:0 10px 30px -12px rgba(0,0,0,.6); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0a111e; --surface:#131c2d; --ink:#e9eff9; --muted:#97a5bc; --faint:#6b7a93;
+  --line:#243049; --track:#222d45; --field:#1b2539;
+  --panel:#18233b; --panel-ink:#e6edf9; --panel-muted:#8c99b3; --panel-line:#2e3c5c; --panel-accent:#7db5ff;
+  --cta-bg:#2563eb; --cta-fg:#ffffff;
+  --blue:#4b83f5; --orange:#fb8a3c; --green:#22b488; --pink:#f062ad; --rose:#fb7185; --amber:#f5c542;
+  --bubble-me:#2f6bea; --bubble-me-ink:#ffffff; --coach-bg:#172a4d; --coach-ink:#b6d0ff;
+  --shadow:0 10px 30px -12px rgba(0,0,0,.6); color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.55}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+.strip{background:var(--surface);border-bottom:1px solid var(--line);text-align:center;padding-block:10px;
+  font-weight:700;font-size:14px;letter-spacing:-.01em}
+.strip span{color:var(--muted);font-weight:500}
+
+/* 홈 */
+.home{max-width:1180px;margin:0 auto;padding-block:28px 56px}
+.home h1{font-size:clamp(24px,4vw,34px);font-weight:900;letter-spacing:-.03em;margin:0;text-wrap:balance}
+.home .lead{color:var(--muted);margin:6px 0 24px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px}
+@media (max-width:980px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:720px){.grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}}
+@media (max-width:420px){.grid{grid-template-columns:1fr}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:26px;padding:22px 20px 20px;text-align:left;
+  display:flex;flex-direction:column;gap:4px;min-width:0;box-shadow:var(--shadow);transition:transform .15s,border-color .15s}
+.card:hover{transform:translateY(-3px);border-color:var(--blue)}
+.card .emo{font-size:44px;line-height:1.1}
+.card .nm{font-size:20px;font-weight:900;letter-spacing:-.02em;margin-top:6px}
+.card .tp{font-size:12px;color:var(--muted);margin-bottom:10px}
+.meters{display:flex;flex-direction:column;gap:9px}
+.meter .row{display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:var(--muted)}
+.meter .row b{color:var(--ink);font-variant-numeric:tabular-nums}
+.meter .bar{height:6px;border-radius:99px;background:var(--track);margin-top:4px;overflow:hidden}
+.meter .bar i{display:block;height:100%;border-radius:99px}
+
+/* 상세 */
+.sbar{background:var(--surface);border-bottom:1px solid var(--line)}
+.sbar .in{max-width:1420px;margin:0 auto;display:flex;align-items:center;gap:12px;padding-block:12px;flex-wrap:wrap}
+.back{width:38px;height:38px;border-radius:12px;background:var(--field);display:grid;place-items:center;flex:none}
+.sbar .emo{font-size:34px;line-height:1}
+.sbar .who{min-width:0;flex:1}
+.sbar .who b{display:block;font-size:22px;font-weight:900;letter-spacing:-.02em;line-height:1.2}
+.sbar .who small{color:var(--muted);font-size:12px}
+.cta{background:var(--cta-bg);color:var(--cta-fg);font-weight:900;font-size:14px;padding:13px 20px;border-radius:14px;
+  display:inline-flex;align-items:center;gap:9px;box-shadow:var(--shadow)}
+.cta:hover{filter:brightness(1.15)}
+.detail{max-width:1420px;margin:0 auto;padding-block:24px 40px;display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:28px;align-items:start}
+@media (max-width:900px){.detail{grid-template-columns:1fr;gap:16px}}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:28px;padding:26px;box-shadow:var(--shadow)}
+.box h2,.plan h2{font-size:15px;font-weight:900;margin:0 0 16px;display:flex;align-items:center;gap:9px}
+.box h2 svg{color:var(--blue)}
+.box .meters{gap:14px}
+.box .meter .bar{height:8px}
+.plan{background:var(--panel);color:var(--panel-ink);border-radius:32px;padding:28px;min-height:340px;box-shadow:var(--shadow)}
+.plan h2{color:var(--panel-accent);font-size:17px;justify-content:space-between}
+.plan h2 span{display:flex;align-items:center;gap:10px}
+.refresh{width:36px;height:36px;border-radius:50%;background:var(--panel-line);color:var(--panel-ink);display:grid;place-items:center;flex:none}
+.refresh:hover{background:var(--blue)}
+.refresh.busy svg{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.plan h3{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--panel-ink);margin:18px 0 8px;display:flex;align-items:center;gap:7px}
+.plan h3 svg{flex:none}
+.plan .hint{font-size:12px;color:var(--panel-muted);margin:0}
+.plan ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.plan li{border:1px solid var(--panel-line);border-radius:14px;padding:10px 13px;font-size:13px}
+.plan li b{display:block;font-weight:700}
+.plan li span{color:var(--panel-muted)}
+.plan .src{font-size:11px;color:var(--panel-muted);margin-top:14px}
+
+.chat{background:var(--surface);border:1px solid var(--line);border-radius:36px;box-shadow:var(--shadow);
+  display:grid;grid-template-columns:minmax(0,1fr) 84px;min-height:640px;overflow:hidden}
+.talk{display:flex;flex-direction:column;min-width:0}
+.log{flex:1;padding:28px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;max-height:62vh;min-height:320px}
+.msg{max-width:82%;padding:13px 18px;border-radius:22px;font-weight:500;overflow-wrap:anywhere}
+.msg.st{align-self:flex-start;background:var(--surface);border:1px solid var(--line);box-shadow:0 6px 16px -10px rgba(15,23,42,.35);font-weight:700}
+.msg.me{align-self:flex-end;background:var(--bubble-me);color:var(--bubble-me-ink)}
+.coach{align-self:flex-end;max-width:82%;background:var(--coach-bg);color:var(--coach-ink);font-size:12px;border-radius:12px;padding:7px 11px;margin-top:-6px}
+.coach b{font-weight:900;margin-right:4px}
+.sys{align-self:center;font-size:12px;color:var(--muted);text-align:center}
+.dots{display:inline-flex;gap:4px}.dots i{width:6px;height:6px;border-radius:50%;background:var(--faint);animation:bl 1s infinite}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes bl{50%{opacity:.25}}
+.send{border-top:1px solid var(--line);padding:22px 26px;display:flex;gap:8px;background:var(--surface)}
+.send .wrap{flex:1;display:flex;background:var(--field);border-radius:18px;padding:6px;min-width:0}
+.send input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font:inherit;font-weight:500;padding:8px 14px;outline:none}
+.send input::placeholder{color:var(--faint);font-weight:700}
+.send button{width:50px;height:46px;border-radius:14px;background:var(--blue);color:#fff;display:grid;place-items:center;flex:none}
+.send button:disabled{opacity:.5;cursor:default}
+.reset{align-self:center;font-size:12px;color:var(--muted);text-decoration:underline;padding:4px 8px}
+
+.rail{border-left:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:22px 0;gap:6px}
+.rail .cap{writing-mode:vertical-rl;font-size:9px;font-weight:900;letter-spacing:.18em;color:var(--rose);display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.step{display:flex;flex-direction:column;align-items:center;gap:6px}
+.step .dot{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line);color:var(--faint);display:grid;place-items:center;transition:.3s}
+.step small{font-size:10px;font-weight:700;color:var(--faint)}
+.step.on .dot{background:var(--blue);border-color:var(--blue);color:#fff}
+.step.now .dot{background:var(--cta-bg);border-color:var(--cta-bg);color:#fff;box-shadow:0 0 0 5px var(--track)}
+.step.on small,.step.now small{color:var(--ink)}
+.seg{flex:1;width:3px;min-height:36px;border-radius:9px;background:var(--track);overflow:hidden;display:flex}
+.seg i{display:block;width:100%;height:0;background:var(--blue);transition:height .4s,width .4s}
+@media (max-width:900px){
+  .chat{grid-template-columns:1fr;border-radius:26px;min-height:0}
+  .rail{order:-1;flex-direction:row;border-left:0;border-bottom:1px solid var(--line);padding:12px 16px;gap:8px}
+  .rail .cap{writing-mode:horizontal-tb;margin:0 4px 0 0}
+  .rail .cap span{display:none}
+  .seg{height:3px;width:auto;min-height:0;min-width:12px}
+  .seg i{height:100%;width:0}
+  .step .dot{width:32px;height:32px}
+  .log{padding:18px;max-height:52vh}.send{padding:14px}
+  .box,.plan{padding:20px;border-radius:24px}
+}
+
+/* 설계도 */
+.ov{position:fixed;inset:0;background:rgba(8,13,25,.6);z-index:50;display:flex;justify-content:center;align-items:flex-start;overflow-y:auto;
+  padding:calc(24px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.sheet{background:var(--surface);border-radius:24px;max-width:760px;width:100%;box-shadow:var(--shadow);overflow:hidden}
+.sheet .top{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--line)}
+.sheet .top .st{margin-right:auto;font-size:12px;color:var(--muted)}
+.btn{padding:9px 14px;border-radius:11px;background:var(--field);font-weight:700;font-size:13px}
+.btn.pri{background:var(--blue);color:#fff}
+.doc{padding:30px clamp(18px,5vw,40px) 36px}
+.doc .org{font-size:12px;font-weight:700;color:var(--blue)}
+.doc h1{font-size:26px;font-weight:900;letter-spacing:-.03em;margin:4px 0 2px}
+.doc .meta{color:var(--muted);font-size:13px;padding-bottom:16px;border-bottom:2px solid var(--ink)}
+.doc h2{font-size:14px;font-weight:900;margin:22px 0 8px;color:var(--blue)}
+.doc p{margin:0 0 6px}
+.doc ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
+.doc table{width:100%;border-collapse:collapse;font-size:13px}
+.doc td,.doc th{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+.doc th{background:var(--field);white-space:nowrap;font-weight:700}
+.tw{overflow-x:auto}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="strip gut">2026. 교원 AI 디지털 연수<span>(전남교육연수원_류란영)</span></div>
+<div id="app"></div>
+<div id="ov" class="ov" hidden></div>
+
+<script>
+const ORG = "2026. 교원 AI 디지털 연수(전남교육연수원_류란영)";
+const METRICS = [["ach","학업성취도","--blue"],["acc","문제풀이 정답률","--orange"],["self","자기주도성","--green"],["peer","동료관계","--pink"]];
+const STAGES = ["경계","탐색","개방","신뢰"];
+const I = {
+  back:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
+  doc:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/></svg>',
+  clip:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM9 13l2 2 4-4"/></svg>',
+  brain:'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4a3 3 0 0 0-3 3 3 3 0 0 0-2 5 3 3 0 0 0 2 5 3 3 0 0 0 6 0V7a3 3 0 0 0-3-3z"/><path d="M16 6h4M16 11h3M16 16h4"/></svg>',
+  ref:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></svg>',
+  bolt:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg>',
+  user:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="4"/><path d="M3 21a7 7 0 0 1 14 0M19 8v6M22 11h-6"/></svg>',
+  send:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/></svg>',
+  smile:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01"/></svg>',
+  st:[
+   '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>',
+   '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>',
+   '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.5-2"/></svg>',
+   '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.500-7 10-7 10z"/></svg>']
+};
+
+const P = [
+ {n:"김민수",e:"👱",t:"무기력한 관망자",g:"중2",m:[15,20,12,5],
+  d:"수업 내내 엎드려 있거나 창밖을 본다. 해도 안 된다는 경험이 쌓여 시도 자체를 하지 않고, 친구들과도 거의 말을 섞지 않는다.",
+  o:"…네? 저요? 그냥 안 할래요. 어차피 해도 모르는데요.",
+  r:["…몰라요. 그냥 두세요.","뭐… 하라는 게 뭔데요. 조금만 하면 돼요?","사실 처음부터 못 따라가서… 어디서부터 모르는지도 모르겠어요.","쌤이 물어봐 주니까 좀 낫네요. 쉬운 것부터 하나만 해 볼게요."],
+  tools:[["AI 디지털교과서 진단 기능","결손이 시작된 지점을 찾아 아주 쉬운 문항부터 다시 시작"],["클래스카드","짧은 카드 학습으로 '맞혔다'는 경험을 하루 한 번 확보"]],
+  ht:[["하루 한 문장 안부","학습 이야기를 빼고 먼저 이름을 불러 주며 관심을 표현"],["작은 성공 기록장","한 문제라도 푼 날을 교사가 직접 적어 주고 함께 확인"]]},
+ {n:"이지훈",e:"🏃",t:"초반 과열 방전형",g:"중1",m:[45,55,40,70],
+  d:"시작은 누구보다 빠르지만 앞부분만 서둘러 풀고 금세 흥미를 잃는다. 검토를 하지 않아 실수가 많고, 다 했다며 놀고 싶어 한다.",
+  o:"선생님! 저 벌써 5번까지 다 풀었어요! 대박 빠르죠? 이제 좀 놀아도 돼요?",
+  r:["아 진짜요… 다 풀었는데 또 해요? 재미없어요.","음… 3번은 좀 찍긴 했어요. 근데 빨리 푼 건 맞잖아요!","사실 뒤로 갈수록 어려워서 하기 싫어져요. 앞에만 잘하는 것 같아요.","그럼 6번부터는 쌤이랑 시간 재면서 해 볼래요. 끝까지 가면 인정해 주세요!"],
+  tools:[["뽀모도로 타이머(Forest 등)","10분 집중·3분 휴식 주기로 에너지를 끝까지 나눠 쓰는 연습"],["AI 디지털교과서 오답 분석","빠르게 푼 문항의 오답 유형을 즉시 보여 주어 검토 습관 형성"]],
+  ht:[["속도 인정 후 정확도 도전","빠른 출발을 먼저 칭찬하고 '이번엔 실수 0개' 미션을 제안"],["중간 체크인","과제 중반에 교사가 다가가 남은 분량을 함께 쪼개어 확인"]]},
+ {n:"최예은",e:"🎮",t:"게임/보상 몰입형",g:"중1",m:[55,65,60,85],
+  d:"포인트와 배지가 걸리면 누구보다 몰입하지만 보상이 없으면 금방 손을 놓는다. 친구들과는 잘 어울린다.",
+  o:"쌤, 이거 하면 포인트 줘요? 안 주면 좀 그런데… 랭킹은 있어요?",
+  r:["포인트 없으면 왜 해요…","음, 그럼 레벨 같은 건 있어요? 깨는 맛이 있어야죠.","사실 점수 오르는 거 말고는 뭐가 재밌는지 잘 모르겠어요.","문제 자체를 퀘스트처럼 만드는 건 재밌겠다! 제가 친구들 것도 만들어 볼게요."],
+  tools:[["띵커벨·퀴즈앤","게임형 퀴즈로 몰입을 살리되 직접 문제를 출제하는 역할 부여"],["엔트리","보상을 받는 사람에서 게임을 만드는 사람으로 전환"]],
+  ht:[["보상에서 의미로 다리 놓기","포인트 대신 '무엇을 새로 알게 됐는지' 한마디를 물어봄"],["또래 퀘스트 메이커","친구를 돕는 역할을 맡겨 관계 강점을 학습 동기로 연결"]]},
+ {n:"박도윤",e:"🤖",t:"AI 의존형",g:"중2",m:[100,94,5,30],
+  d:"과제는 항상 완벽하게 제출하지만 대부분 생성형 AI의 답을 그대로 옮긴 것이다. 스스로 설명해 보라고 하면 말문이 막힌다.",
+  o:"다 했어요. AI한테 물어보니까 바로 나오던데요? 굳이 제가 풀 필요 있어요?",
+  r:["결과만 맞으면 되는 거 아니에요?","음… 설명하라고 하면 좀 막히긴 해요.","사실 혼자 풀면 틀릴까 봐 무서워서 그냥 AI 켜요.","그럼 먼저 제가 풀고, AI는 채점만 시켜 볼게요. 틀려도 뭐라 안 하실 거죠?"],
+  tools:[["칸미고(Khanmigo)식 소크라테스 튜터","답을 주지 않고 질문으로 이끄는 AI로 사용 방식 전환"],["패들렛 풀이 과정 게시","정답이 아닌 사고 과정을 기록·공유하도록 과제 형식 변경"]],
+  ht:[["과정 설명 1분 인터뷰","제출물 중 한 문항만 말로 설명하게 하고 과정을 칭찬"],["틀려도 안전한 시간","AI 없이 푼 초안은 평가하지 않는다고 분명히 약속"]]},
+ {n:"한하린",e:"🙋‍♀️",t:"불안 완벽주의",g:"중2",m:[50,75,10,40],
+  d:"한 문제마다 맞는지 확인받으러 온다. 틀리는 것을 지나치게 두려워해 교사의 확인 없이는 다음으로 넘어가지 못한다.",
+  o:"선생님, 이거 맞아요? 2번도 봐 주세요. 틀리면 안 되는데… 다시 봐 주시면 안 돼요?",
+  r:["그래도 확인 한 번만요… 불안해요.","혼자 넘어가면 틀렸을까 봐 계속 생각나요.","사실 틀리면 엄마가 실망하실까 봐 그래요.","그럼 세 문제는 혼자 풀고 한꺼번에 여쭤볼게요. 해 볼 수 있을 것 같아요."],
+  tools:[["AI 디지털교과서 즉시 피드백","교사 대신 스스로 확인하는 채널을 만들어 확인 요청 간격 넓히기"],["구글 폼 자가 점검","확신 정도를 스스로 표시해 보고 결과와 비교"]],
+  ht:[["확인 간격 늘리기 약속","'세 문제마다 한 번'처럼 함께 정한 규칙으로 독립성 연습"],["오답 환영 한마디","틀린 문제에서 무엇을 배웠는지를 먼저 묻고 격려"]]},
+ {n:"서준",e:"💬",t:"관계 지향 산만형",g:"중1",m:[40,45,20,100],
+  d:"친구가 가장 중요하다. 수업 중에도 계속 말을 걸고 분위기를 띄우지만 자기 과제는 거의 손대지 못한다.",
+  o:"쌤쌤, 저 옆자리 애랑 같이 하면 안 돼요? 혼자 하면 심심해서 못 하겠어요.",
+  r:["에이, 혼자는 진짜 못 해요.","그럼 같이 하되 뭐를 하면 되는데요?","사실 조용히 있으면 애들이 저 재미없다고 할까 봐요.","제가 모둠 진행 맡을게요! 다 같이 끝내게 만들면 되는 거죠?"],
+  tools:[["패들렛 협업 보드","말하고 싶은 에너지를 댓글·공동 작업으로 옮기기"],["캔바 모둠 발표","협업 산출물 안에 개인 담당 구역을 분명히 지정"]],
+  ht:[["역할 부여","모둠 진행자·질문 담당 같은 공식 역할로 관계 욕구를 인정"],["개인 몫 먼저 5분","대화 전 혼자 하는 5분을 약속하고 지키면 즉시 인정"]]},
+ {n:"지우",e:"🧐",t:"고립된 우등생",g:"고1",m:[100,98,95,10],
+  d:"성적은 최상위지만 모둠 활동을 시간 낭비로 여긴다. 혼자가 편하다고 말하지만 쉬는 시간에도 늘 혼자 있다.",
+  o:"모둠 활동은 비효율적이에요. 제가 혼자 다 하는 게 빠른데 왜 같이 해야 하죠?",
+  r:["저는 혼자가 편합니다.","…설명해 주는 건 할 수 있어요. 근데 애들이 안 들어요.","사실 뭐라고 말을 걸어야 할지 모르겠어요. 공부 얘기 말고는요.","튜터 역할이라면 해 볼게요. 한 명부터요."],
+  tools:[["노션 공동 탐구 노트","깊이 있는 개인 탐구를 다른 학생이 참고하는 자료로 공유"],["패들렛 질문 답변 보드","비대면으로 먼저 도움을 주고받는 낮은 문턱의 교류"]],
+  ht:[["또래 튜터 1:1 연결","부담 적은 한 명과 짝지어 설명하는 경험 제공"],["공부 밖 이야기 묻기","관심사·취미를 먼저 물어 대화의 주제를 넓힘"]]},
+ {n:"민지",e:"😳",t:"실수에 멈춘 아이",g:"중1",m:[60,68,45,12],
+  d:"발표 중 한 번 틀려 웃음거리가 된 뒤로 손을 들지 않는다. 틀릴 것 같으면 아예 쓰지 않고 비워 둔다.",
+  o:"……저 안 하면 안 돼요? 또 틀리면 애들이 웃을 것 같아요.",
+  r:["…괜찮아요. 그냥 안 할게요.","쌤한테만 보여 드리는 건… 괜찮을 것 같아요.","그때 다들 웃어서 아직도 생각나요. 진짜 창피했어요.","익명으로 올리는 거면 해 볼게요. 틀려도 쌤이 모른 척해 주세요."],
+  tools:[["멘티미터 익명 응답","이름 없이 의견을 내며 참여 경험을 다시 쌓기"],["패들렛 비공개 제출","교사만 볼 수 있는 제출로 안전하게 시도"]],
+  ht:[["실수 경험 공감","그날의 감정을 먼저 들어 주고 교사의 실수담을 나눔"],["작은 발표 사다리","교사에게만 → 짝에게 → 모둠 순으로 단계적 공개"]]},
+ {n:"현우",e:"📓",t:"디지털 거부형",g:"중1",m:[12,42,5,20],
+  d:"태블릿을 꺼내지 않고 공책만 고집한다. 기기 조작이 서툴러 뒤처진 경험이 있고, 로그인부터 막혀 포기한 적이 많다.",
+  o:"저는 그냥 공책에 쓸게요. 태블릿은 뭐가 뭔지 모르겠고 귀찮아요.",
+  r:["안 해요. 공책이 편해요.","로그인부터 안 돼서 맨날 저만 늦어요.","애들은 다 잘하는데 저만 못 하니까 물어보기도 창피해요.","공책에 쓴 걸 사진 찍어 올리는 거면 해 볼게요. 그건 알려 주세요."],
+  tools:[["구글 클래스룸 사진 제출","공책 필기를 촬영해 올리는 가장 쉬운 디지털 첫걸음"],["북크리에이터","손글씨와 그림을 그대로 담아 디지털 결과물로 전환"]],
+  ht:[["기기 짝꿍","조작을 옆에서 조용히 도와줄 친구를 정해 줌"],["공책 강점 인정","꼼꼼한 필기를 먼저 칭찬하고 선택권을 존중"]]},
+ {n:"유나",e:"✍️",t:"완벽주의 지연형",g:"고1",m:[20,99,22,20],
+  d:"제출한 과제는 거의 만점이지만 완벽하지 않으면 내지 않아 미제출이 쌓인다. 시작을 미루다 마감을 넘긴다.",
+  o:"아직 못 냈어요… 마음에 안 들어서요. 조금만 더 고치면 낼 수 있을 것 같은데.",
+  r:["이 상태로는 못 내요.","어디까지가 '됐다'인지 모르겠어요.","대충 낸 걸 보면 저를 그렇게 볼까 봐 무서워요.","초안이라고 써서 반만 먼저 낼게요. 피드백 주시면 고칠게요."],
+  tools:[["노션·구글 문서 초안 공유","완성 전 과정을 공유해 '중간 제출'을 정상으로 만들기"],["캔바 템플릿","시작 장벽을 낮추는 틀을 제공해 착수 시간을 단축"]],
+  ht:[["70% 제출 약속","완성도 기준을 함께 낮추고 초안 제출을 크게 인정"],["마감 쪼개기","큰 과제를 3단계 소마감으로 나누어 함께 점검"]]},
+ {n:"시우",e:"🩹",t:"정서적 불안형",g:"중3",m:[30,52,35,40],
+  d:"집안 사정으로 잠을 잘 못 자고 수업에 집중하지 못한다. 작은 말에도 예민하게 반응하거나 갑자기 입을 닫는다.",
+  o:"오늘은 그냥… 아무것도 하기 싫어요. 건드리지 말아 주세요.",
+  r:["…괜찮다니까요.","잠을 못 자서 그래요. 그냥 좀 피곤해요.","집에 일이 좀 있어요. 말하기는 그런데… 머리에 아무것도 안 들어와요.","오늘은 이것만 하고, 내일 다시 얘기해도 돼요? 들어 주셔서 감사해요."],
+  tools:[["구글 폼 마음 체크인","말하기 어려운 날의 상태를 한 번의 선택으로 알리기"],["AI 디지털교과서 분량 조절","컨디션에 맞춰 과제 양을 줄인 개별 경로 제공"]],
+  ht:[["먼저 쉬게 하기","학습 요구를 미루고 쉴 자리와 시간을 허락"],["상담 연계","담임·전문상담교사와 조용히 연결하고 정기적으로 안부 확인"]]},
+ {n:"채원",e:"🎨",t:"디지털 창작자",g:"고2",m:[75,43,95,95],
+  d:"영상·그림 제작에 뛰어나고 스스로 프로젝트를 벌이지만 문제풀이식 평가에서는 점수가 낮다. 시험 공부는 지루해한다.",
+  o:"쌤, 이번 단원 영상으로 만들어도 돼요? 문제 푸는 것보다 그게 훨씬 잘 돼요!",
+  r:["문제집은 진짜 손이 안 가요.","만들 땐 다 이해한 것 같은데 시험만 보면 틀려요.","사실 제가 진짜 아는 건지, 꾸미기만 잘하는 건지 헷갈려요.","영상에 개념 퀴즈를 넣어 볼게요. 제가 문제도 직접 만들면 되겠네요!"],
+  tools:[["브루(Vrew)·캔바 영상","개념 설명 영상을 평가 산출물로 인정"],["퀴즈앤 문제 출제","직접 만든 콘텐츠에 확인 문항을 붙여 정답률 보완"]],
+  ht:[["창작물 공개 무대","작품을 학급 자료로 사용해 강점을 공식적으로 인정"],["개념 연결 질문","'이 장면은 어떤 개념이야?'로 창작과 이해를 이어 줌"]]}
+];
+P.forEach((p,i)=>{p.id=i;p.s={turns:[{r:"st",c:p.o}],rap:8,plan:null}});
+
+let sample=null, downloads=null, cur=null, busy=false;
+(async()=>{try{sample=await window.claude?.use?.("sample")??null;downloads=await window.claude?.use?.("downloads")??null}catch(e){}})();
+
+const app=document.getElementById("app"), ov=document.getElementById("ov");
+function h(tag,attrs,...kids){const n=document.createElement(tag);
+  for(const k in attrs||{}){const v=attrs[k];
+    if(k==="class")n.className=v;else if(k==="html")n.innerHTML=v;else if(k==="text")n.textContent=v;
+    else if(k.startsWith("on"))n.addEventListener(k.slice(2),v);else if(v!==false&&v!=null)n.setAttribute(k,v)}
+  kids.flat().forEach(c=>c!=null&&n.append(c));return n}
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const stageOf=r=>r>=75?3:r>=50?2:r>=25?1:0;
+function meters(p){return h("div",{class:"meters"},METRICS.map(([k,l,c],i)=>h("div",{class:"meter"},
+  h("div",{class:"row"},h("span",{text:l}),h("b",{text:p.m[i]+"%"})),
+  h("div",{class:"bar"},h("i",{style:`width:${p.m[i]}%;background:var(${c})`})))))}
+
+function home(){cur=null;app.replaceChildren(h("main",{class:"home gut"},
+  h("h1",{text:"AI 학생 공감 진단 대시보드"}),
+  h("p",{class:"lead",text:"학생 카드를 눌러 대화를 시작하세요. 공감의 말로 라포를 쌓고, 맞춤 성장 지원 설계도를 발행할 수 있습니다."}),
+  h("div",{class:"grid"},P.map(p=>h("button",{class:"card",type:"button",onclick:()=>detail(p)},
+    h("div",{class:"emo",text:p.e}),h("div",{class:"nm",text:p.n}),h("div",{class:"tp",text:`${p.t} · ${p.g}`}),meters(p))))));
+  scrollTo(0,0)}
+
+let logEl,railEl,planEl,inputEl,sendBtn;
+function detail(p){cur=p;
+  logEl=h("div",{class:"log",id:"log","aria-live":"polite"});
+  railEl=h("aside",{class:"rail","aria-label":"라포 단계"});
+  planEl=h("section",{class:"plan"});
+  inputEl=h("input",{id:"teacher-input",type:"text",placeholder:"학생의 마음을 여는 공감의 한마디...",autocomplete:"off","aria-label":"교사 발화 입력",maxlength:"300"});
+  sendBtn=h("button",{type:"submit","aria-label":"보내기",html:I.send});
+  app.replaceChildren(
+    h("div",{class:"sbar"},h("div",{class:"in gut"},
+      h("button",{class:"back",type:"button","aria-label":"학생 목록으로",html:I.back,onclick:home}),
+      h("div",{class:"emo",text:p.e}),
+      h("div",{class:"who"},h("b",{text:p.n}),h("small",{text:`${p.t} · ${p.g}`})),
+      h("button",{class:"cta",type:"button",onclick:()=>blueprint(p)},h("span",{html:I.doc,style:"display:grid"}),"학생성장지원 설계도 발행"))),
+    h("main",{class:"detail gut"},
+      h("div",{class:"col"},
+        h("section",{class:"box"},h("h2",{},h("span",{html:I.clip,style:"display:grid"}),"핵심 성장 지표"),meters(p)),
+        planEl),
+      h("section",{class:"chat"},
+        h("div",{class:"talk"},logEl,
+          h("form",{class:"send",onsubmit:e=>{e.preventDefault();send()}},h("div",{class:"wrap"},inputEl,sendBtn))),
+        railEl)));
+  p.s.turns.forEach(t=>addMsg(t));
+  if(p.s.turns.length>1)logEl.append(resetBtn());
+  drawRail();drawPlan();scrollTo(0,0)}
+
+function resetBtn(){return h("button",{class:"reset",type:"button",text:"대화 처음부터 다시",onclick:()=>{cur.s={turns:[{r:"st",c:cur.o}],rap:8,plan:null};detail(cur)}})}
+function addMsg(t){
+  if(t.r==="sys"){logEl.append(h("div",{class:"sys",text:t.c}));}
+  else{logEl.append(h("div",{class:"msg "+(t.r==="me"?"me":"st"),text:t.c}));
+    if(t.fb)logEl.append(h("div",{class:"coach"},h("b",{text:"코칭"}),t.fb))}
+  logEl.scrollTop=logEl.scrollHeight}
+function drawRail(){const r=cur.s.rap,st=stageOf(r);const kids=[h("div",{class:"cap"},h("span",{html:I.smile,style:"display:grid;writing-mode:horizontal-tb"}),h("span",{text:"RAPPORT"}))];
+  STAGES.forEach((nm,i)=>{
+    kids.push(h("div",{class:"step"+(i<st?" on":i===st?" now":"")},h("div",{class:"dot",html:I.st[i]}),h("small",{text:nm})));
+    if(i<3){const f=clamp((r-i*25)/25,0,1)*100;const bar=h("i");
+      bar.style.height=f+"%";bar.style.width=f+"%";
+      const seg=h("div",{class:"seg"},bar);kids.push(seg)}});
+  railEl.replaceChildren(...kids);
+  // 방향에 맞는 축만 채움
+  const horiz=matchMedia("(max-width:900px)").matches;
+  railEl.querySelectorAll(".seg i").forEach(b=>{if(horiz)b.style.height="100%";else b.style.width="100%"})}
+addEventListener("resize",()=>{if(cur&&railEl)drawRail()});
+
+function drawPlan(loading){const p=cur,pl=p.s.plan,talked=p.s.turns.some(t=>t.r==="me");
+  const list=a=>h("ul",{},a.map(([n,w])=>h("li",{},h("b",{text:n}),h("span",{text:w}))));
+  const rb=h("button",{class:"refresh"+(loading?" busy":""),type:"button","aria-label":"맞춤 전략 분석",title:"맞춤 전략 분석",html:I.ref,onclick:analyze});
+  rb.disabled=!!loading;
+  planEl.replaceChildren(
+    h("h2",{},h("span",{},h("span",{html:I.brain,style:"display:grid"}),"맞춤 성장 지원 전략"),rb),
+    h("h3",{html:I.bolt+" AI 디지털 도구 추천 (2종)"}),
+    loading?h("p",{class:"hint",text:"분석 중입니다…"}):pl?list(pl.tools):h("p",{class:"hint",text:"분석 버튼을 눌러 추천을 받아보세요."}),
+    h("h3",{html:I.user+" 하이터치(정서 지원) 방법 (2종)"}),
+    loading?h("p",{class:"hint",text:"분석 중입니다…"}):pl&&pl.ht?list(pl.ht):h("p",{class:"hint",text:talked?"분석 버튼을 눌러 대화 내용을 반영하세요.":"학생과의 대화 후 분석이 가능합니다."}),
+    pl&&pl.src?h("p",{class:"src",text:pl.src}):null)}
+
+function profile(p){return `학생: ${p.n}(${p.g}) / 유형: ${p.t}\n특성: ${p.d}\n지표: `+METRICS.map((m,i)=>`${m[1]} ${p.m[i]}%`).join(", ")}
+function transcript(p){return p.s.turns.filter(t=>t.r!=="sys").map(t=>(t.r==="me"?"교사: ":"학생: ")+t.c).join("\n")}
+const pairs=(a,k1,k2)=>Array.isArray(a)?a.slice(0,2).map(x=>[String(x?.[k1]??"").slice(0,60),String(x?.[k2]??"").slice(0,160)]).filter(x=>x[0]):[];
+
+async function analyze(){const p=cur,talked=p.s.turns.some(t=>t.r==="me");if(busy)return;
+  const preset=()=>({tools:p.tools,ht:talked?p.ht:null,src:"학생 유형에 따른 기본 추천입니다."});
+  if(!sample){p.s.plan=preset();drawPlan();return}
+  busy=true;drawPlan(true);
+  try{const j=await sample.json(`교사 연수용 학습자 분석 도구다. 아래 학생에게 맞는 지원 전략을 한국어로 제안하라.\n${profile(p)}\n현재 라포: ${STAGES[stageOf(p.s.rap)]} 단계(${p.s.rap}/100)\n대화 기록:\n${transcript(p)}\n\n한국 학교에서 실제로 쓰는 에듀테크 도구 2종과, 교사가 직접 하는 정서 지원(하이터치) 방법 2종을 제안하라. 각 설명은 40자 안팎의 한 문장.\nJSON만 출력: {"tools":[{"name":"","why":""},{"name":"","why":""}],"hightouch":[{"name":"","how":""},{"name":"","how":""}]}`,{modelTier:"quick"});
+    const tools=pairs(j?.tools,"name","why"),ht=pairs(j?.hightouch,"name","how");
+    if(p!==cur)return;
+    p.s.plan=tools.length?{tools,ht:talked&&ht.length?ht:null,src:talked?"대화 내용을 반영한 AI 분석입니다.":"학생 지표를 바탕으로 한 AI 분석입니다."}:preset();
+  }catch(e){if(e?.code==="not_granted")sample=null;p.s.plan=preset()}
+  finally{busy=false;if(p===cur)drawPlan()}}
+
+const POS=/힘들|괜찮|고마|잘했|대단|멋지|마음|같이|함께|궁금|어땠|어때|그랬구나|그렇구나|이해|속상|천천히|응원|믿|도와|들어|좋아|수고|걱정|편하/;
+const NEG=/해야|하지 ?마|안 ?돼|빨리|왜 ?안|똑바로|혼나|그만|당장|한심|게으/;
+function localReply(p,text){let d=4;if(POS.test(text))d+=12;if(/\?|까요|니\b|어\?/.test(text))d+=4;if(NEG.test(text))d-=16;if(text.length<6)d-=3;
+  const rap=clamp(p.s.rap+d,0,100);
+  return {reply:p.r[stageOf(rap)],rapport_delta:d,feedback:d>=12?"학생의 감정을 먼저 읽어 준 말이 마음을 열었습니다.":d<0?"지시보다 학생의 입장을 먼저 물어보는 말로 바꿔 보세요.":"좋은 시작입니다. 감정을 짚는 말이나 열린 질문을 더해 보세요."}}
+
+async function send(){const p=cur,text=inputEl.value.trim();if(!text||busy)return;
+  busy=true;sendBtn.disabled=true;inputEl.value="";
+  logEl.querySelector(".reset")?.remove();
+  const me={r:"me",c:text};p.s.turns.push(me);addMsg(me);
+  const wait=h("div",{class:"msg st"},h("span",{class:"dots","aria-label":"학생이 답하는 중"},h("i"),h("i"),h("i")));logEl.append(wait);logEl.scrollTop=logEl.scrollHeight;
+  let out=null;
+  if(sample){try{
+    const j=await sample.json(`너는 교사 연수용 시뮬레이션에서 아래 학생을 연기한다. 교사(연수생)는 학생과 라포를 쌓는 연습을 하고 있다.\n${profile(p)}\n현재 라포: ${STAGES[stageOf(p.s.rap)]} 단계(${p.s.rap}/100). 단계는 경계(0~24) → 탐색(25~49) → 개방(50~74) → 신뢰(75~100).\n\n대화 기록:\n${transcript(p)}\n\n교사의 마지막 말에 학생으로서 한국어 구어체 1~3문장으로 답하라. 경계 단계에서는 짧고 방어적으로, 탐색에서는 조금 반응하고, 개방에서는 속사정을 꺼내고, 신뢰에서는 스스로 해 보겠다는 작은 다짐을 보인다. 학생 나이에 맞는 말투를 쓰고 캐릭터를 벗어나지 마라.\nrapport_delta: 교사의 마지막 말이 공감적이고 학생의 관점을 존중하며 구체적이면 +8~+20, 무난하면 0~+6, 지시·비난·무시이면 -5~-15.\nfeedback: 교사 발화에 대한 한 줄 코칭(40자 안팎, 존댓말).\nJSON만 출력: {"reply":"","rapport_delta":0,"feedback":""}`,{modelTier:"quick",cache:false});
+    if(j&&typeof j.reply==="string"&&j.reply.trim())out={reply:j.reply.trim().slice(0,400),rapport_delta:clamp(Number(j.rapport_delta)||0,-15,20),feedback:String(j.feedback||"").slice(0,120)};
+  }catch(e){
+    if(e?.code==="not_granted"){sample=null;p.s.turns.push({r:"sys",c:"AI 연결 없이 예시 응답으로 진행합니다."})}
+    else if(e?.code==="rate_limited")p.s.turns.push({r:"sys",c:"요청이 많아 이번 답은 예시 응답으로 대신합니다."})}}
+  if(!out){await new Promise(r=>setTimeout(r,500));out=localReply(p,text)}
+  wait.remove();
+  p.s.rap=clamp(p.s.rap+out.rapport_delta,0,100);
+  me.fb=out.feedback?`${out.feedback} (라포 ${out.rapport_delta>=0?"+":""}${out.rapport_delta})`:null;
+  p.s.turns.push({r:"st",c:out.reply});
+  busy=false;
+  if(p===cur){logEl.replaceChildren();p.s.turns.forEach(addMsg);logEl.append(resetBtn());drawRail();if(!p.s.plan)drawPlan();sendBtn.disabled=false;inputEl.focus()}}
+
+/* ───── 설계도 ───── */
+function basePlan(p){const weak=METRICS[p.m.indexOf(Math.min(...p.m))][1];
+  const pl=p.s.plan||{tools:p.tools,ht:p.ht};const ht=pl.ht||p.ht;
+  return {diagnosis:p.d,strength:"강점 지표: "+METRICS[p.m.indexOf(Math.max(...p.m))][1]+` (${Math.max(...p.m)}%)`,
+    goals:[`${weak} 지표를 한 학기 동안 단계적으로 끌어올린다.`,`교사와의 라포를 '신뢰' 단계까지 형성한다.`,`${pl.tools[0][0]} 활용 경험을 주 2회 이상 갖는다.`],
+    steps:[["1단계 · 관계 형성","1~2주",`${ht[0][0]}: ${ht[0][1]}`],["2단계 · 맞춤 학습","3~6주",`${pl.tools[0][0]}와 ${pl.tools[1][0]}를 수업·과제에 적용`],["3단계 · 자기주도 확장","7주 이후",`${ht[1][0]}: ${ht[1][1]}`]],
+    tip:"변화는 지표보다 학생의 말에서 먼저 나타납니다. 2주마다 짧은 대화로 상태를 확인하세요."}}
+
+async function blueprint(p){const pl=p.s.plan||{tools:p.tools,ht:p.ht};const ht=pl.ht||p.ht;
+  const today=new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric"});
+  let bp=basePlan(p);const said=p.s.turns.filter(t=>t.r==="me").length;
+  const status=h("span",{class:"st"});const docEl=h("div",{class:"doc"});
+  const render=()=>{docEl.replaceChildren(
+    h("div",{class:"org",text:ORG}),h("h1",{text:"학생성장지원 설계도"}),
+    h("div",{class:"meta",text:`${p.n} (${p.g}) · ${p.t} · 발행일 ${today}`}),
+    h("h2",{text:"1. 핵심 성장 지표"}),
+    h("div",{class:"tw"},h("table",{},h("tr",{},METRICS.map(m=>h("th",{text:m[1]}))),h("tr",{},p.m.map(v=>h("td",{text:v+"%"}))))),
+    h("h2",{text:"2. 학습자 진단"}),h("p",{text:bp.diagnosis}),h("p",{text:bp.strength}),
+    h("h2",{text:"3. 라포 형성 현황"}),
+    h("p",{text:`현재 단계: ${STAGES[stageOf(p.s.rap)]} (${p.s.rap}/100) · 교사 발화 ${said}회`}),
+    h("h2",{text:"4. 성장 목표"}),h("ul",{},bp.goals.map(g=>h("li",{text:g}))),
+    h("h2",{text:"5. AI 디지털 도구"}),h("ul",{},pl.tools.map(t=>h("li",{text:`${t[0]} — ${t[1]}`}))),
+    h("h2",{text:"6. 하이터치(정서 지원)"}),h("ul",{},ht.map(t=>h("li",{text:`${t[0]} — ${t[1]}`}))),
+    h("h2",{text:"7. 단계별 지원 계획"}),
+    h("div",{class:"tw"},h("table",{},h("tr",{},["단계","시기","지원 내용"].map(x=>h("th",{text:x}))),bp.steps.map(s=>h("tr",{},s.map(c=>h("td",{text:c})))))),
+    h("h2",{text:"8. 교사 유의점"}),h("p",{text:bp.tip}))};
+  render();
+  const close=()=>{ov.hidden=true;ov.replaceChildren()};
+  const copyBtn=h("button",{class:"btn",type:"button",text:"텍스트 복사",onclick:async()=>{
+    try{await navigator.clipboard.writeText(docEl.innerText);copyBtn.textContent="복사했습니다"}
+    catch(e){const r=document.createRange();r.selectNodeContents(docEl);const s=getSelection();s.removeAllRanges();s.addRange(r);copyBtn.textContent="선택됨 · Ctrl+C"}}});
+  const saveBtn=h("button",{class:"btn pri",type:"button",text:"파일로 저장",onclick:async()=>{
+    const html=`<!doctype html><html lang="ko"><meta charset="utf-8"><title>학생성장지원 설계도 - ${p.n}</title><style>body{font-family:"Malgun Gothic","Apple SD Gothic Neo",sans-serif;max-width:760px;margin:40px auto;padding:0 20px;line-height:1.6;color:#111}h1{margin:4px 0}h2{font-size:15px;color:#1d4ed8;margin:22px 0 8px}.org{color:#1d4ed8;font-weight:700;font-size:13px}.meta{color:#555;padding-bottom:14px;border-bottom:2px solid #111}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:8px;text-align:left;vertical-align:top}th{background:#f1f5f9}p{margin:0 0 6px}</style>${docEl.innerHTML}</html>`;
+    try{await downloads.save({filename:`학생성장지원설계도_${p.n}.html`,data:html});saveBtn.textContent="저장했습니다"}
+    catch(e){if(e?.code!=="declined")saveBtn.textContent="저장할 수 없습니다"}}});
+  saveBtn.hidden=!downloads;
+  ov.replaceChildren(h("div",{class:"sheet",role:"dialog","aria-modal":"true","aria-label":"학생성장지원 설계도"},
+    h("div",{class:"top"},status,copyBtn,saveBtn,h("button",{class:"btn",type:"button",text:"닫기",onclick:close})),docEl));
+  ov.hidden=false;ov.scrollTop=0;
+  ov.onclick=e=>{if(e.target===ov)close()};
+  if(!sample){status.textContent="기본 설계도";return}
+  status.textContent="AI가 대화 내용을 반영해 다듬는 중…";
+  try{const j=await sample.json(`교사 연수용 '학생성장지원 설계도'를 한국어로 작성하라. 교사가 바로 실행할 수 있게 구체적으로 쓴다.\n${profile(p)}\n라포: ${STAGES[stageOf(p.s.rap)]} 단계(${p.s.rap}/100)\n추천 도구: ${pl.tools.map(t=>t[0]).join(", ")}\n정서 지원: ${ht.map(t=>t[0]).join(", ")}\n대화 기록:\n${transcript(p)}\n\nJSON만 출력: {"diagnosis":"대화에서 드러난 점을 반영한 진단 2~3문장","strength":"강점 한 문장","goals":["목표1","목표2","목표3"],"steps":[{"phase":"1단계 · 관계 형성","period":"1~2주","action":""},{"phase":"2단계 · 맞춤 학습","period":"3~6주","action":""},{"phase":"3단계 · 자기주도 확장","period":"7주 이후","action":""}],"tip":"교사 유의점 1~2문장"}`,{modelTier:"default"});
+    const S=x=>String(x??"").trim().slice(0,400);
+    const steps=Array.isArray(j?.steps)?j.steps.slice(0,4).map(s=>[S(s?.phase),S(s?.period),S(s?.action)]).filter(s=>s[2]):[];
+    const goals=Array.isArray(j?.goals)?j.goals.slice(0,4).map(S).filter(Boolean):[];
+    if(S(j?.diagnosis)&&steps.length&&goals.length){bp={diagnosis:S(j.diagnosis),strength:S(j.strength)||bp.strength,goals,steps,tip:S(j.tip)||bp.tip};if(!ov.hidden)render();status.textContent="AI 분석 반영 완료"}
+    else status.textContent="기본 설계도";
+  }catch(e){if(e?.code==="not_granted")sample=null;status.textContent="기본 설계도"}}
+addEventListener("keydown",e=>{if(e.key==="Escape"&&!ov.hidden){ov.hidden=true;ov.replaceChildren()}});
+
+home();
+</script>
+
+</body>
+</html>
